@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "class_file.h": "c",
+        "common.h": "c"
+    }
+}
