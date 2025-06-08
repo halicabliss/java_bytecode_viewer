@@ -42,22 +42,19 @@ ClassFile* parse_class_file(const char *filepath) {
     for (int i = 1; i < cf->constant_pool_count; ++i) {
         cp_info *entry = parse_constant_pool_entry(fp);
         if (!entry) {
-            free_class_file(cf);
+            free_class_file(cf); 
             fclose(fp);
             return NULL;
         }
-        // Handle CONSTANT_Long_info and CONSTANT_Double_info which occupy two slots
-        if (entry->tag == CONSTANT_Long || entry->tag == CONSTANT_Double) {
-            // Store the entry
-            memcpy(&cf->constant_pool[i-1], entry, sizeof(cp_info));
-            free(entry);
-            i++;
-            //
-        } else {
-            memcpy(&cf->constant_pool[i-1], entry, sizeof(cp_info));
-            free(entry); 
+        // Store the entry
+        memcpy(&cf->constant_pool[i-1], entry, sizeof(cp_info));
+        free(entry);
+
+        if (cf->constant_pool[i-1].tag == CONSTANT_Long || cf->constant_pool[i-1].tag == CONSTANT_Double) {
+            i++; 
         }
     }
+
 
     // Read Access Flags, This Class, Super Class, Interfaces
     cf->access_flags = read_u16(fp);
@@ -96,6 +93,7 @@ ClassFile* parse_class_file(const char *filepath) {
 }
 
 
+
 void print_class_file_info(const ClassFile *cf) {
     if (!cf) return;
     printf("ClassFile Information:\n");
@@ -105,26 +103,41 @@ void print_class_file_info(const ClassFile *cf) {
     printf("  Constant Pool Count: %u\n", cf->constant_pool_count);
 
     printf("\nConstant Pool:\n");
-    // Loop up to constant_pool_count starting with index 1
     for (int i = 1; i < cf->constant_pool_count; ++i) {
-        // Handle long/double occupying two slots (print only the first one)
+        print_constant_pool_entry(&cf->constant_pool[i-1], i, cf->constant_pool);
         if (cf->constant_pool[i-1].tag == CONSTANT_Long || cf->constant_pool[i-1].tag == CONSTANT_Double) {
-            print_constant_pool_entry(&cf->constant_pool[i-1], i);
-            i++; // Skip the next slot
-        } else {
-            print_constant_pool_entry(&cf->constant_pool[i-1], i);
+            printf("  #%d = (large constant continues)\n", i + 1); // Indicate the skipped slot
+            i++; 
         }
     }
 
     printf("\nGeneral Details:\n");
     printf("  Access Flags: 0x%04X\n", cf->access_flags);
-    //printf("  This Class: #%u // %s\n", cf->this_class, get_utf8_string(cf->constant_pool, cf->constant_pool[cf->this_class-1].info.class_info.name_index)); 
-    //printf("  Super Class: #%u // %s\n", cf->super_class, get_utf8_string(cf->constant_pool, cf->constant_pool[cf->super_class-1].info.class_info.name_index)); 
+    const char* this_class_name = "ERROR: Invalid Class Index";
+    if (cf->this_class > 0 && cf->this_class < cf->constant_pool_count &&
+        cf->constant_pool[cf->this_class-1].tag == CONSTANT_Class) {
+        this_class_name = get_utf8_string(cf->constant_pool, cf->constant_pool[cf->this_class-1].info.class_info.name_index);
+    }
+    printf("  This Class: #%u // %s\n", cf->this_class, this_class_name);
+
+    const char* super_class_name = "ERROR: Invalid Class Index";
+    if (cf->super_class > 0 && cf->super_class < cf->constant_pool_count &&
+        cf->constant_pool[cf->super_class-1].tag == CONSTANT_Class) {
+        super_class_name = get_utf8_string(cf->constant_pool, cf->constant_pool[cf->super_class-1].info.class_info.name_index);
+    }
+    printf("  Super Class: #%u // %s\n", cf->super_class, super_class_name);
+
+
     printf("  Interfaces Count: %u\n", cf->interfaces_count);
     if (cf->interfaces_count > 0) {
         printf("  Interfaces:\n");
         for (int i = 0; i < cf->interfaces_count; ++i) {
-            //printf("    #%u // %s\n", cf->interfaces[i], get_utf8_string(cf->constant_pool, cf->constant_pool[cf->interfaces[i]-1].info.class_info.name_index));
+            const char* interface_name = "ERROR: Invalid Interface Index";
+            if (cf->interfaces[i] > 0 && cf->interfaces[i] < cf->constant_pool_count &&
+                cf->constant_pool[cf->interfaces[i]-1].tag == CONSTANT_Class) {
+                interface_name = get_utf8_string(cf->constant_pool, cf->constant_pool[cf->interfaces[i]-1].info.class_info.name_index);
+            }
+            printf("    #%u // %s\n", cf->interfaces[i], interface_name);
         }
     }
     printf("  Fields Count: %u\n", cf->fields_count);
@@ -132,23 +145,14 @@ void print_class_file_info(const ClassFile *cf) {
     printf("  Attributes Count: %u\n", cf->attributes_count);
 }
 
-
 void free_class_file(ClassFile *cf) {
     if (cf) {
         if (cf->constant_pool) {
-            // Free constant pool entries
-            for (int i = 0; i < cf->constant_pool_count -1; ++i) {
-                 if (cf->constant_pool[i].tag == CONSTANT_Utf8) {
-                    free(cf->constant_pool[i].info.utf8_info.bytes);
-                 }
-                 // Handle other constant types that allocate memory
-            }
-            free(cf->constant_pool);
+            free_constant_pool(cf->constant_pool, cf->constant_pool_count);
         }
         if (cf->interfaces) {
             free(cf->interfaces);
         }
-        // Free fields, methods, and attributes when implemented
         free(cf);
     }
 }
