@@ -186,21 +186,22 @@ void print_constant_pool_entry(const cp_info *entry, int index, const cp_info *f
             printf("Long               %lld\n", val);
             break;
         }
-        // case CONSTANT_Double: {
-        //     double val = u64_to_double(combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes));
-        //     printf("Double             %lf", val);
-        //     if (val == 0.0 && entry->info.double_info.bytes == 0x8000000000000000ULL) {
-        //          printf(" (negative zero)");
-        //     } else if (isnan(val)) {
-        //         printf(" (NaN)");
-        //     } else if (val == DBL_MAX && combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes) == 0x7ff0000000000000ULL) {
-        //          printf(" (Positive Infinity)");
-        //     } else if (val == -DBL_MAX && combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes) == 0xfff0000000000000ULL) {
-        //          printf(" (Negative Infinity)");
-        //     }
-        //     printf("\n");
-        //     break;
-        // }
+        case CONSTANT_Double: {
+            double val = u64_to_double(combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes));
+            printf("Double             %lf", val);
+            // if (val == 0.0 && entry->info.double_info.bytes == 0x8000000000000000ULL) {
+            //      printf(" (negative zero)");
+            // } else 
+            if (isnan(val)) {
+                printf(" (NaN)");
+            } else if (val == DBL_MAX && combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes) == 0x7ff0000000000000ULL) {
+                 printf(" (Positive Infinity)");
+            } else if (val == -DBL_MAX && combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes) == 0xfff0000000000000ULL) {
+                 printf(" (Negative Infinity)");
+            }
+            printf("\n");
+            break;
+        }
         case CONSTANT_Class: {
             const char* class_name = get_utf8_string(full_constant_pool, entry->info.class_info.name_index);
             printf("Class              #%u // %s\n", entry->info.class_info.name_index, class_name);
@@ -315,4 +316,123 @@ const char* get_utf8_string(const cp_info *constant_pool, uint16_t index) {
         return (const char*)entry->info.utf8_info.bytes;
     }
     return "NOT_UTF8";
+}
+
+// void print_constant_pool_entry_value(const cp_info *entry, const cp_info *constant_pool);
+
+void print_constant_pool_entry_value(const cp_info *entry, const cp_info *constant_pool) {
+    if (!entry) return;
+
+    switch (entry->tag) {
+        case CONSTANT_Utf8:
+            printf("\"%s\"", entry->info.utf8_info.bytes);
+            break;
+        case CONSTANT_Integer:
+            printf("%d", (int32_t)entry->info.integer_info.bytes);
+            break;
+        case CONSTANT_Float: {
+            float val = u32_to_float(entry->info.float_info.bytes);
+            printf("%f", val);
+            if (val == 0.0f && entry->info.float_info.bytes == 0x80000000) {
+                printf(" (negative zero)");
+            } else if (isnan(val)) {
+                printf(" (NaN)");
+            } else if (val == FLT_MAX && entry->info.float_info.bytes == 0x7f800000) {
+                printf(" (Positive Infinity)");
+            } else if (val == -FLT_MAX && entry->info.float_info.bytes == 0xff800000) {
+                printf(" (Negative Infinity)");
+            }
+            break;
+        }
+        case CONSTANT_Long: {
+            int64_t val = (int64_t)combine_u32_to_u64(entry->info.long_info.high_bytes, entry->info.long_info.low_bytes);
+            printf("%lld", val);
+            break;
+        }
+        case CONSTANT_Double: {
+            double val = u64_to_double(combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes));
+            printf("%lf", val);
+            if (isnan(val)) {
+                printf(" (NaN)");
+            } else if (val == DBL_MAX && combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes) == 0x7ff0000000000000ULL) {
+                printf(" (Positive Infinity)");
+            } else if (val == -DBL_MAX && combine_u32_to_u64(entry->info.double_info.high_bytes, entry->info.double_info.low_bytes) == 0xfff0000000000000ULL) {
+                printf(" (Negative Infinity)");
+            }
+            break;
+        }
+        case CONSTANT_Class: {
+            const char* class_name = get_utf8_string(constant_pool, entry->info.class_info.name_index);
+            printf("Class #%u // %s", entry->info.class_info.name_index, class_name);
+            break;
+        }
+        case CONSTANT_String: {
+            const char* string_val = get_utf8_string(constant_pool, entry->info.string_info.string_index);
+            printf("String #%u // %s", entry->info.string_info.string_index, string_val);
+            break;
+        }
+        case CONSTANT_Fieldref: {
+            const char* class_name = get_utf8_string(constant_pool, constant_pool[entry->info.fieldref_info.class_index-1].info.class_info.name_index);
+            const char* name = get_utf8_string(constant_pool, constant_pool[entry->info.fieldref_info.name_and_type_index-1].info.name_and_type_info.name_index);
+            const char* descriptor = get_utf8_string(constant_pool, constant_pool[entry->info.fieldref_info.name_and_type_index-1].info.name_and_type_info.descriptor_index);
+            printf("Fieldref #%u.#%u // %s.%s:%s",
+                   entry->info.fieldref_info.class_index,
+                   entry->info.fieldref_info.name_and_type_index,
+                   class_name, name, descriptor);
+            break;
+        }
+        case CONSTANT_Methodref: {
+            const char* class_name = get_utf8_string(constant_pool, constant_pool[entry->info.methodref_info.class_index-1].info.class_info.name_index);
+            const char* name = get_utf8_string(constant_pool, constant_pool[entry->info.methodref_info.name_and_type_index-1].info.name_and_type_info.name_index);
+            const char* descriptor = get_utf8_string(constant_pool, constant_pool[entry->info.methodref_info.name_and_type_index-1].info.name_and_type_info.descriptor_index);
+            printf("Methodref #%u.#%u // %s.%s:%s",
+                   entry->info.methodref_info.class_index,
+                   entry->info.methodref_info.name_and_type_index,
+                   class_name, name, descriptor);
+            break;
+        }
+        case CONSTANT_InterfaceMethodref: {
+            const char* class_name = get_utf8_string(constant_pool, constant_pool[entry->info.interface_methodref_info.class_index-1].info.class_info.name_index);
+            const char* name = get_utf8_string(constant_pool, constant_pool[entry->info.interface_methodref_info.name_and_type_index-1].info.name_and_type_info.name_index);
+            const char* descriptor = get_utf8_string(constant_pool, constant_pool[entry->info.interface_methodref_info.name_and_type_index-1].info.name_and_type_info.descriptor_index);
+            printf("InterfaceMethodref #%u.#%u // %s.%s:%s",
+                   entry->info.interface_methodref_info.class_index,
+                   entry->info.interface_methodref_info.name_and_type_index,
+                   class_name, name, descriptor);
+            break;
+        }
+        case CONSTANT_NameAndType: {
+            const char* name = get_utf8_string(constant_pool, entry->info.name_and_type_info.name_index);
+            const char* descriptor = get_utf8_string(constant_pool, entry->info.name_and_type_info.descriptor_index);
+            printf("NameAndType #%u:#%u // %s:%s",
+                   entry->info.name_and_type_info.name_index,
+                   entry->info.name_and_type_info.descriptor_index,
+                   name, descriptor);
+            break;
+        }
+        case CONSTANT_MethodHandle:
+            printf("MethodHandle %u:#%u",
+                   entry->info.method_handle_info.reference_kind,
+                   entry->info.method_handle_info.reference_index);
+            break;
+        case CONSTANT_MethodType: {
+            const char* descriptor = get_utf8_string(constant_pool, entry->info.method_type_info.descriptor_index);
+            printf("MethodType #%u // %s",
+                   entry->info.method_type_info.descriptor_index, descriptor);
+            break;
+        }
+        case CONSTANT_Dynamic:
+            printf("Dynamic #%u:#%u",
+                   entry->info.dynamic_info.bootstrap_method_attr_index,
+                   entry->info.dynamic_info.name_and_type_index);
+            break;
+        case CONSTANT_InvokeDynamic:
+            printf("InvokeDynamic #%u:#%u",
+                   entry->info.invoke_dynamic_info.bootstrap_method_attr_index,
+                   entry->info.invoke_dynamic_info.name_and_type_index);
+            break;
+        default:
+            printf("Unknown_Constant_Type (tag %u)", entry->tag);
+            break;
+       }
 }

@@ -3,7 +3,13 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include "constant_pool.h" // for cp_info
+#include "common.h"
+#include "constant_pool.h"
+#include "attributes.h"
+
+#include "fields.h"
+#include "methods.h"
+
 
 typedef struct {
     uint32_t magic;
@@ -15,22 +21,22 @@ typedef struct {
     uint16_t this_class;
     uint16_t super_class;
     uint16_t interfaces_count;
-    uint16_t *interfaces; // Array of interface indices
+    uint16_t *interfaces;
+
     uint16_t fields_count;
-    // field_info *fields; // Placeholder for field structures
+    field_info *fields;
+
     uint16_t methods_count;
-    // method_info *methods; // Placeholder for method structures
+    method_info *methods;
+
     uint16_t attributes_count;
-    // attribute_info *attributes; // Placeholder for class attributes
+    attribute_info *attributes;
 } ClassFile;
 
-// Function to parse the entire ClassFile
 ClassFile* parse_class_file(const char *filepath);
 
-// Function to print ClassFile general info
 void print_class_file_info(const ClassFile *cf);
 
-// Function to free ClassFile memory
 void free_class_file(ClassFile *cf);
 
 #endif

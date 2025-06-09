@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h> 
-#include "common.h" // for read_u16 and read_u32
+#include "common.h"
 
 // Constant pool tags
 typedef enum {
@@ -28,10 +28,9 @@ typedef enum {
 } constant_pool_tag;
 
 // Structs for constant pool entries
-
 typedef struct {
     uint16_t length;
-    uint8_t *bytes; // null-terminated string
+    uint8_t *bytes; 
 } CONSTANT_Utf8_info;
 
 typedef struct {
@@ -81,10 +80,8 @@ typedef struct {
 } CONSTANT_NameAndType_info;
 
 typedef struct {
-    uint8_t reference_kind;         // Indicates the kind of method handle
-    uint16_t reference_index;       // Index into the constant pool to a CONSTANT_Fieldref_info,
-                                    // CONSTANT_Methodref_info, or CONSTANT_InterfaceMethodref_info,
-                                    // or CONSTANT_MethodHandle_info itself, depending on reference_kind
+    uint8_t reference_kind;
+    uint16_t reference_index;
 } CONSTANT_MethodHandle_info;
 
 typedef struct {
@@ -141,5 +138,7 @@ void print_constant_pool_entry(const cp_info *entry, int index, const cp_info *f
 void free_constant_pool(cp_info *constant_pool, uint16_t count);
 
 const char* get_utf8_string(const cp_info *constant_pool, uint16_t index);
+
+void print_constant_pool_entry_value(const cp_info *entry, const cp_info *constant_pool);
 
 #endif

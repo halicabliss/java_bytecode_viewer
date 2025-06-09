@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+
 // Reads a 16-bit unsigned integer from the file 
 uint16_t read_u16(FILE *fp) {
     uint16_t val;
